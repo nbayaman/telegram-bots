@@ -12,33 +12,33 @@ const HELP_TEXT = "Send me a phone number and I'll reply with WhatsApp and Teleg
  *   country code 996 (matching the original Python bot behaviour)
  */
 function parseNumber(text) {
-  let number = text.replace(/\D/g, "");
-  if (number.startsWith("0")) {
-    number = "996" + number.slice(1);
-  }
-  return number;
+    let number = text.replace(/\D/g, "");
+    if (number.startsWith("0")) {
+        number = "996" + number.slice(1);
+    }
+    return number;
 }
 
 export async function handleWame(request, token) {
-  const bot = new Bot(token, { botInfo });
+    const bot = new Bot(token, { botInfo });
 
-  if (!botInfo) {
-    await bot.init();
-    botInfo = bot.botInfo;
-  }
-
-  bot.command("start", (ctx) => ctx.reply(HELP_TEXT));
-  bot.command("help",  (ctx) => ctx.reply(HELP_TEXT));
-
-  bot.on("message:text", async (ctx) => {
-    const number = parseNumber(ctx.message.text);
-    if (!number) {
-      await ctx.reply("That is not a number");
-      return;
+    if (!botInfo) {
+        await bot.init();
+        botInfo = bot.botInfo;
     }
-    await ctx.reply(`https://wa.me/${number}`);
-    await ctx.reply(`https://t.me/+${number}`);
-  });
 
-  return webhookCallback(bot, "cloudflare-mod")(request);
+    bot.command("start", (ctx) => ctx.reply(HELP_TEXT));
+    bot.command("help", (ctx) => ctx.reply(HELP_TEXT));
+
+    bot.on("message:text", async (ctx) => {
+        const number = parseNumber(ctx.message.text);
+        if (!number) {
+            await ctx.reply("That is not a number");
+            return;
+        }
+        await ctx.reply(`https://wa.me/${number}`);
+        await ctx.reply(`https://t.me/+${number}`);
+    });
+
+    return webhookCallback(bot, "cloudflare-mod")(request);
 }
