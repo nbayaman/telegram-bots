@@ -1,0 +1,7 @@
+# Copy this file to .dev.vars and fill in your bot tokens for local development.
+# .dev.vars is gitignored and never committed.
+#
+# To get a token: message @BotFather on Telegram → /newbot
+
+BOT_WAME_TOKEN=your_wame_bot_token_here
+BOT_NANA_TOKEN=your_nana_bot_token_here

@@ -1,0 +1,8 @@
+name = "telegram-bots"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets are NOT stored here — add them via:
+#   npx wrangler secret put BOT_WAME_TOKEN
+#   npx wrangler secret put BOT_NANA_TOKEN
