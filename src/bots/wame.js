@@ -15,8 +15,13 @@ const HELP_TEXT = "Send me a phone number and I'll reply with WhatsApp and Teleg
  */
 function parseNumber(text) {
     let number = text.replace(/\D/g, "");
-    if (number.startsWith("0")) {
+    // KG
+    if (number.startsWith("0") && number.length === 10) {
         number = "996" + number.slice(1);
+    }
+    // KZ
+    if (number.startsWith("8") && number.length === 11) {
+        number = "7" + number.slice(1);
     }
     return number;
 }
