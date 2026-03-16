@@ -2,15 +2,17 @@
 /**
  * Registers Telegram webhooks for every bot after deployment.
  *
- * Required env vars (in .dev.vars locally, or real env vars in CI):
- *   WORKER_URL       — e.g. https://telegram-bots.yoursubdomain.workers.dev
- *   BOT_WAME_TOKEN
- *   BOT_NANA_TOKEN
+ * Tokens are imported directly from each bot's source file.
+ * Required CI env vars (provided automatically by Cloudflare Pages/Workers):
+ *   CLOUDFLARE_API_TOKEN
+ *   CLOUDFLARE_ACCOUNT_ID
  */
 
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { TOKEN as WAME_TOKEN } from "../src/bots/wame.js";
+import { TOKEN as NANA_TOKEN } from "../src/bots/nana.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const devVarsPath = resolve(__dirname, "../.dev.vars");
@@ -33,8 +35,8 @@ try {
 // Bot registry — add new bots here, matching the routes in src/index.js
 // ---------------------------------------------------------------------------
 const BOTS = [
-    { name: "WaMe", tokenEnv: "BOT_WAME_TOKEN", path: "/bot_wame" },
-    { name: "NanaCalc", tokenEnv: "BOT_NANA_TOKEN", path: "/bot_nana" },
+    { name: "WaMe",     token: WAME_TOKEN, path: "/bot_wame" },
+    { name: "NanaCalc", token: NANA_TOKEN,  path: "/bot_nana" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -81,16 +83,10 @@ if (!workerUrl) {
 
 let allOk = true;
 for (const bot of BOTS) {
-    const token = process.env[bot.tokenEnv];
-    if (!token) {
-        console.warn(`Warning: ${bot.tokenEnv} not set — skipping ${bot.name}`);
-        allOk = false;
-        continue;
-    }
 
     const webhookUrl = `${workerUrl}${bot.path}`;
     try {
-        const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+        const res = await fetch(`https://api.telegram.org/bot${bot.token}/setWebhook`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ url: webhookUrl }),

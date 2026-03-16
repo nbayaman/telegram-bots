@@ -1,5 +1,7 @@
 import { Bot, webhookCallback } from "grammy";
 
+export const TOKEN = "7183730717:AAGP43_H2yUeyqy0DFUBzIlNRStKtkZnXno";
+
 // Cache botInfo at module level to avoid a getMe call on every warm request
 let botInfo = undefined;
 
@@ -64,8 +66,8 @@ async function replyWithPrices(ctx, price) {
     await ctx.reply(`<b>Final price with 50% markup:</b> ${formatPrice(finalPrice)} USD`, { parse_mode: "HTML" });
 }
 
-export async function handleNana(request, token) {
-    const bot = new Bot(token, { botInfo });
+export async function handleNana(request) {
+    const bot = new Bot(TOKEN, { botInfo });
 
     if (!botInfo) {
         await bot.init();

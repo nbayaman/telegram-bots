@@ -1,5 +1,7 @@
 import { Bot, webhookCallback } from "grammy";
 
+export const TOKEN = "5108789603:AAESCJWgtcdXKxUL1cMeNIhgbNXSWftzhS8";
+
 // Cache botInfo at module level to avoid a getMe call on every warm request
 let botInfo = undefined;
 
@@ -19,8 +21,8 @@ function parseNumber(text) {
     return number;
 }
 
-export async function handleWame(request, token) {
-    const bot = new Bot(token, { botInfo });
+export async function handleWame(request) {
+    const bot = new Bot(TOKEN, { botInfo });
 
     if (!botInfo) {
         await bot.init();

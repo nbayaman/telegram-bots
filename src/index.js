@@ -6,11 +6,11 @@ export default {
         const { pathname } = new URL(request.url);
 
         if (pathname === "/bot_wame") {
-            return handleWame(request, env.BOT_WAME_TOKEN);
+            return handleWame(request);
         }
 
         if (pathname === "/bot_nana") {
-            return handleNana(request, env.BOT_NANA_TOKEN);
+            return handleNana(request);
         }
 
         return new Response("Not Found", { status: 404 });
