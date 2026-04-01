@@ -154,7 +154,7 @@ export async function handleMediaTushur(request) {
             }
         } catch (err) {
             console.error(`[${detected.platform}] error:`, err.message);
-            await ctx.reply("Sorry, I couldn't fetch that video. The link may be private, age-restricted, or unsupported.");
+            await ctx.reply(`Error [${detected.platform}]: ${err.message}`);
             return;
         }
 
