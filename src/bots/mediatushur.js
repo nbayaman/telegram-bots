@@ -75,9 +75,13 @@ async function getTwitterUrl(pageUrl) {
     if (!match) throw new Error("Could not extract tweet ID");
     const tweetId = match[1];
 
+    // Token formula required by the syndication API:
+    // Math.floor((BigInt(id) / 1e15) * Math.PI).toString(36)
+    const token = Math.floor((Number(BigInt(tweetId)) / 1e15) * Math.PI).toString(36);
+
     // Twitter's public syndication API — no auth required
     const res = await fetch(
-        `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&lang=en&token=0`
+        `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&lang=en&token=${token}`
     );
     if (!res.ok) throw new Error(`Twitter syndication HTTP ${res.status}`);
 
