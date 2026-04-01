@@ -75,18 +75,21 @@ async function getTwitterUrl(pageUrl) {
     if (!match) throw new Error("Could not extract tweet ID");
     const tweetId = match[1];
 
-    const u = new URL(pageUrl);
-    const username = u.pathname.split("/").filter(Boolean)[0] ?? "i";
-
-    const res = await fetch(`https://api.fxtwitter.com/${username}/status/${tweetId}`);
-    if (!res.ok) throw new Error(`fxtwitter HTTP ${res.status}`);
+    // Twitter's public syndication API — no auth required
+    const res = await fetch(
+        `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&lang=en&token=0`
+    );
+    if (!res.ok) throw new Error(`Twitter syndication HTTP ${res.status}`);
 
     const data = await res.json();
-    if (data.code !== 200 || !data.tweet) throw new Error(`fxtwitter: ${data.message}`);
 
-    // videos[0].url is already the highest-quality MP4 from the CDN
-    const videoUrl = data.tweet.media?.videos?.[0]?.url;
-    if (!videoUrl) throw new Error("No video found in this tweet");
+    // Pick the highest-bitrate MP4 variant
+    const variants = data.video?.variants ?? [];
+    const mp4s = variants.filter((v) => v.type === "video/mp4");
+    if (!mp4s.length) throw new Error("No video found in this tweet");
+
+    // Variants are returned in ascending bitrate order — last is highest quality
+    const videoUrl = mp4s[mp4s.length - 1].src;
     return videoUrl;
 }
 
