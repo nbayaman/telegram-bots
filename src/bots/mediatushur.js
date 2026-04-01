@@ -1,4 +1,4 @@
-import { Bot, webhookCallback } from "grammy";
+import { Bot, webhookCallback, InputFile } from "grammy";
 
 export const TOKEN = "8748081545:AAEWrb-hIUK1RhJxVGPW7D8QznY62HcMujw";
 const RAPIDAPI_KEY = "3918f4eb49msh33525a8c0436cd9p162b31jsn919834e1c771";
@@ -71,15 +71,12 @@ async function getYouTubeUrl(pageUrl, rapidApiKey) {
 // ---------------------------------------------------------------------------
 
 async function getTwitterUrl(pageUrl) {
-    // Extract tweet ID from x.com/{user}/status/{id} or twitter.com/{user}/status/{id}
     const match = pageUrl.match(/\/status\/(\d+)/);
     if (!match) throw new Error("Could not extract tweet ID");
     const tweetId = match[1];
 
-    // Extract username for the fxtwitter API path
     const u = new URL(pageUrl);
-    const parts = u.pathname.split("/").filter(Boolean);
-    const username = parts[0] ?? "i";
+    const username = u.pathname.split("/").filter(Boolean)[0] ?? "i";
 
     const res = await fetch(`https://api.fxtwitter.com/${username}/status/${tweetId}`);
     if (!res.ok) throw new Error(`fxtwitter HTTP ${res.status}`);
@@ -87,16 +84,9 @@ async function getTwitterUrl(pageUrl) {
     const data = await res.json();
     if (data.code !== 200 || !data.tweet) throw new Error(`fxtwitter: ${data.message}`);
 
-    const videos = data.tweet.media?.videos;
-    if (!videos?.length) throw new Error("No video found in this tweet");
-
-    // Pick the highest-bitrate variant
-    const best = videos[0].variants
-        ?.filter((v) => v.content_type === "video/mp4")
-        .sort((a, b) => (b.bitrate ?? 0) - (a.bitrate ?? 0))[0];
-
-    const videoUrl = best?.url ?? videos[0].url;
-    if (!videoUrl) throw new Error("No MP4 variant found");
+    // videos[0].url is already the highest-quality MP4 from the CDN
+    const videoUrl = data.tweet.media?.videos?.[0]?.url;
+    if (!videoUrl) throw new Error("No video found in this tweet");
     return videoUrl;
 }
 
@@ -168,9 +158,22 @@ export async function handleMediaTushur(request) {
             return;
         }
 
-        // Try sending as a Telegram video; fall back to a raw link for large files.
+        // Fetch the video bytes inside the Worker and upload as a file to Telegram.
+        // This is required for YouTube (googlevideo.com URLs are signed and Telegram's
+        // servers can't access them), and keeps behaviour consistent for all platforms.
+        let videoBlob;
         try {
-            await ctx.replyWithVideo(videoUrl);
+            const videoRes = await fetch(videoUrl);
+            if (!videoRes.ok) throw new Error(`video fetch ${videoRes.status}`);
+            videoBlob = await videoRes.blob();
+        } catch (err) {
+            console.error("Video proxy error:", err.message);
+            await ctx.reply(`Couldn't download the file. Here's your link instead:\n${videoUrl}`);
+            return;
+        }
+
+        try {
+            await ctx.replyWithVideo(new InputFile(videoBlob, "video.mp4"));
         } catch {
             await ctx.reply(`Here's your download link:\n${videoUrl}`);
         }
