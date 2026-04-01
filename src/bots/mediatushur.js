@@ -1,4 +1,4 @@
-import { Bot, webhookCallback, InputFile } from "grammy";
+import { Bot, webhookCallback } from "grammy";
 
 export const TOKEN = "8748081545:AAEWrb-hIUK1RhJxVGPW7D8QznY62HcMujw";
 const RAPIDAPI_KEY = "3918f4eb49msh33525a8c0436cd9p162b31jsn919834e1c771";
@@ -158,24 +158,16 @@ export async function handleMediaTushur(request) {
             return;
         }
 
-        // Fetch the video bytes inside the Worker and upload as a file to Telegram.
-        // This is required for YouTube (googlevideo.com URLs are signed and Telegram's
-        // servers can't access them), and keeps behaviour consistent for all platforms.
-        let videoBlob;
-        try {
-            const videoRes = await fetch(videoUrl);
-            if (!videoRes.ok) throw new Error(`video fetch ${videoRes.status}`);
-            videoBlob = await videoRes.blob();
-        } catch (err) {
-            console.error("Video proxy error:", err.message);
-            await ctx.reply(`Couldn't download the file. Here's your link instead:\n${videoUrl}`);
-            return;
-        }
-
-        try {
-            await ctx.replyWithVideo(new InputFile(videoBlob, "video.mp4"));
-        } catch {
-            await ctx.reply(`Here's your download link:\n${videoUrl}`);
+        // Twitter (twimg.com) is a public CDN — Telegram can stream it directly.
+        // YouTube and Facebook URLs are IP-bound/auth-bound, so we send a download link.
+        if (detected.platform === "twitter") {
+            try {
+                await ctx.replyWithVideo(videoUrl);
+            } catch {
+                await ctx.reply(`<a href="${videoUrl}">Download link</a>`, { parse_mode: "HTML" });
+            }
+        } else {
+            await ctx.reply(`<a href="${videoUrl}">Download link</a>`, { parse_mode: "HTML" });
         }
     });
 
