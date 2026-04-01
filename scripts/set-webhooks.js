@@ -36,9 +36,9 @@ try {
 // Bot registry — add new bots here, matching the routes in src/index.js
 // ---------------------------------------------------------------------------
 const BOTS = [
-    { name: "WaMe",         token: WAME_TOKEN,         path: "/bot_wame" },
-    { name: "NanaCalc",     token: NANA_TOKEN,         path: "/bot_nana" },
-    { name: "MediaTushur", token: MEDIATUSHUR_TOKEN,  path: "/bot_mediatushur" },
+    { name: "WaMe", token: WAME_TOKEN, path: "/bot_wame" },
+    { name: "NanaCalc", token: NANA_TOKEN, path: "/bot_nana" },
+    { name: "MediaTushur", token: MEDIATUSHUR_TOKEN, path: "/bot_mediatushur" },
 ];
 
 // ---------------------------------------------------------------------------
