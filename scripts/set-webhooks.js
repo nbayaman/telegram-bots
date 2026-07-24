@@ -11,9 +11,6 @@
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { TOKEN as WAME_TOKEN } from "../src/bots/wame.js";
-import { TOKEN as NANA_TOKEN } from "../src/bots/nana.js";
-import { TOKEN as MEDIATUSHUR_TOKEN } from "../src/bots/mediatushur.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const devVarsPath = resolve(__dirname, "../.dev.vars");
@@ -36,9 +33,8 @@ try {
 // Bot registry — add new bots here, matching the routes in src/index.js
 // ---------------------------------------------------------------------------
 const BOTS = [
-    { name: "WaMe", token: WAME_TOKEN, path: "/bot_wame" },
-    { name: "NanaCalc", token: NANA_TOKEN, path: "/bot_nana" },
-    { name: "MediaTushur", token: MEDIATUSHUR_TOKEN, path: "/bot_mediatushur" },
+    { name: "WaMe", token: process.env.BOT_WAME_TOKEN, path: "/bot_wame" },
+    { name: "NanaCalc", token: process.env.BOT_NANA_TOKEN, path: "/bot_nana" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -85,6 +81,11 @@ if (!workerUrl) {
 
 let allOk = true;
 for (const bot of BOTS) {
+    if (!bot.token) {
+        console.error(`✗  ${bot.name}: Token missing in environment / .dev.vars`);
+        allOk = false;
+        continue;
+    }
 
     const webhookUrl = `${workerUrl}${bot.path}`;
     try {

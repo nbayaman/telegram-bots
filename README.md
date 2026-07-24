@@ -18,16 +18,16 @@ wrangler.toml
 
 ## Adding a new bot
 
-1. Create `src/bots/mybot.js` — export `handleMyBot(request, token)` following the pattern in `wame.js`.
+1. Create `src/bots/mybot.js` — export `handleMyBot(request, env)` following the pattern in `wame.js`.
 2. Add a route in `src/index.js`:
    ```js
    if (pathname === "/bot_mybot") {
-     return handleMyBot(request, env.BOT_MYBOT_TOKEN);
+     return handleMyBot(request, env);
    }
    ```
 3. Add the bot to the registry in `scripts/set-webhooks.js`:
    ```js
-   { name: "MyBot", tokenEnv: "BOT_MYBOT_TOKEN", path: "/bot_mybot" },
+   { name: "MyBot", token: process.env.BOT_MYBOT_TOKEN, path: "/bot_mybot" },
    ```
 4. Add a placeholder to `.dev.vars.example` and your real token to `.dev.vars`.
 
@@ -41,14 +41,16 @@ npm run dev
 
 Use a tool like [ngrok](https://ngrok.com) or `wrangler dev --remote` to expose a public URL for testing webhooks locally.
 
-## Deployment
+## Deployment & Security Setup
+
+**NEVER hardcode secrets in source code files.** All tokens must be configured as Cloudflare Worker secrets.
 
 ```bash
-# First deploy: add secrets once
+# Add secrets to Cloudflare Worker
 npx wrangler secret put BOT_WAME_TOKEN
 npx wrangler secret put BOT_NANA_TOKEN
 
-# Deploy + auto-register webhooks
+# Deploy worker & auto-register webhooks
 npm run deploy
 ```
 
@@ -64,8 +66,8 @@ npm run webhooks
 
 | Variable | Where | Description |
 |---|---|---|
-| `BOT_WAME_TOKEN` | Wrangler secret | Telegram token for the WaMe bot |
-| `BOT_NANA_TOKEN` | Wrangler secret | Telegram token for the NanaCalc bot |
+| `BOT_WAME_TOKEN` | Wrangler secret / `.dev.vars` | Telegram token for the WaMe bot |
+| `BOT_NANA_TOKEN` | Wrangler secret / `.dev.vars` | Telegram token for the NanaCalc bot |
 | `WORKER_URL` | `.dev.vars` / CI env | Base URL of the deployed worker, e.g. `https://telegram-bots.yoursubdomain.workers.dev` |
 
-Secrets are never stored in `wrangler.toml`. The `WORKER_URL` is only needed at webhook-registration time — it does not need to be a Worker secret.
+Secrets are never stored in `wrangler.toml` or source code files.
