@@ -1,6 +1,42 @@
 import { handleWame } from "./bots/wame.js";
 import { handleNana } from "./bots/nana.js";
 
+async function getBotStatus(name, token, path, origin) {
+    if (!token) {
+        return `[${name}] ✗ Secret TOKEN missing from Cloudflare Workers`;
+    }
+
+    try {
+        const meRes = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+        const meData = await meRes.json();
+        if (!meData.ok) {
+            return `[${name}] ✗ Invalid Telegram Token: ${meData.description}`;
+        }
+        const botUsername = meData.result.username;
+
+        const infoRes = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`);
+        const infoData = await infoRes.json();
+        const info = infoData.result || {};
+
+        const expectedUrl = `${origin}${path}`;
+        const isUrlMatching = info.url === expectedUrl;
+
+        let statusText = `[${name} (@${botUsername})]\n`;
+        statusText += `  • Registered Webhook URL: ${info.url || "(NONE SET)"}\n`;
+        statusText += `  • Expected Webhook URL:   ${expectedUrl}\n`;
+        statusText += `  • Webhook Status: ${isUrlMatching ? "✓ CORRECT" : "✗ MISMATCH OR MISSING"}\n`;
+        statusText += `  • Pending Updates: ${info.pending_update_count ?? 0}\n`;
+        if (info.last_error_message) {
+            const errDate = info.last_error_date ? new Date(info.last_error_date * 1000).toISOString() : "N/A";
+            statusText += `  • Last Telegram Error (${errDate}): ${info.last_error_message}\n`;
+        }
+
+        return statusText;
+    } catch (err) {
+        return `[${name}] Error checking status: ${err.message}`;
+    }
+}
+
 export default {
     async fetch(request, env) {
         const { pathname, origin } = new URL(request.url);
@@ -35,6 +71,14 @@ export default {
             });
         }
 
+        if (pathname === "/status") {
+            const wameStatus = await getBotStatus("WaMe", env.BOT_WAME_TOKEN, "/bot_wame", origin);
+            const nanaStatus = await getBotStatus("NanaCalc", env.BOT_NANA_TOKEN, "/bot_nana", origin);
+            return new Response(`${wameStatus}\n\n${nanaStatus}`, {
+                headers: { "Content-Type": "text/plain; charset=utf-8" },
+            });
+        }
+
         if (pathname === "/bot_wame") {
             return handleWame(request, env);
         }
@@ -43,6 +87,8 @@ export default {
             return handleNana(request, env);
         }
 
-        return new Response("Not Found", { status: 404 });
+        return new Response("Telegram Bots Worker is Running.\nVisit /status to check bot status or /setup_webhooks to set webhooks.", {
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
     },
 };

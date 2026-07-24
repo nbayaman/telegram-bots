@@ -5,20 +5,12 @@ let botInfo = undefined;
 
 const FALLBACK_CNY_RATE = 0.14; // approx 1 CNY = 0.14 USD
 
-/**
- * Fetch the current CNY→KGS rate from the National Bank of Kyrgyzstan and
- * convert it to USD using a fixed KGS/USD rate embedded in the XML response.
- *
- * The XML endpoint returns exchange rates relative to KGS. grammy runs in a
- * fetch-capable environment so standard fetch() is available.
- */
 async function getCnyRate() {
     try {
         const res = await fetch("https://www.nbkr.kg/XML/weekly.xml");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const xml = await res.text();
 
-        // Extract the Value for CNY using a simple regex (no DOM parser in Workers)
         const cnyMatch = xml.match(
             /<Currency\s+ISOCode="CNY"[^>]*>[\s\S]*?<Value>([\d,. ]+)<\/Value>/
         );
@@ -33,18 +25,10 @@ async function getCnyRate() {
     }
 }
 
-/**
- * Format a number for display: up to 2 decimal places, thousands separator.
- * e.g. 1234.5 → "1,234.5"
- */
 function formatPrice(value) {
     return value.toLocaleString("en-US", { maximumFractionDigits: 2 });
 }
 
-/**
- * Try to extract a numeric price from the user's message.
- * Supports formats like: 199, 199.9, 1 999, 1,999.5
- */
 function parsePrice(text) {
     const match = text.match(/[\d]+(?:[.,\s][\d]+)*/);
     if (!match) return null;
@@ -65,28 +49,34 @@ async function replyWithPrices(ctx, price) {
 }
 
 export async function handleNana(request, env) {
-    const token = env?.BOT_NANA_TOKEN;
-    if (!token) {
-        return new Response("BOT_NANA_TOKEN is not configured", { status: 500 });
-    }
-    const bot = new Bot(token, { botInfo });
-
-    if (!botInfo) {
-        await bot.init();
-        botInfo = bot.botInfo;
-    }
-
-    bot.command("start", (ctx) => ctx.reply("Please enter a price in yuans."));
-    bot.command("help", (ctx) => ctx.reply("Send me a price in Chinese yuan (¥) and I'll calculate the final price in USD with a 50% markup."));
-
-    bot.on("message:text", async (ctx) => {
-        const price = parsePrice(ctx.message.text);
-        if (price === null) {
-            await ctx.reply("Please enter a price in yuans.");
-            return;
+    try {
+        const token = env?.BOT_NANA_TOKEN;
+        if (!token) {
+            return new Response("BOT_NANA_TOKEN is not configured in secrets", { status: 500 });
         }
-        await replyWithPrices(ctx, price);
-    });
+        const bot = new Bot(token, { botInfo });
 
-    return webhookCallback(bot, "cloudflare-mod")(request);
+        if (!botInfo) {
+            await bot.init();
+            botInfo = bot.botInfo;
+        }
+
+        bot.command("start", (ctx) => ctx.reply("Please enter a price in yuans."));
+        bot.command("help", (ctx) => ctx.reply("Send me a price in Chinese yuan (¥) and I'll calculate the final price in USD with a 50% markup."));
+
+        bot.on("message:text", async (ctx) => {
+            const price = parsePrice(ctx.message.text);
+            if (price === null) {
+                await ctx.reply("Please enter a price in yuans.");
+                return;
+            }
+            await replyWithPrices(ctx, price);
+        });
+
+        const cb = webhookCallback(bot, "cloudflare-mod");
+        return await cb(request);
+    } catch (err) {
+        console.error("NanaCalc Error:", err);
+        return new Response(`NanaCalc Error: ${err.message}`, { status: 500 });
+    }
 }
