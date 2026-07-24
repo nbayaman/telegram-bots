@@ -1,11 +1,8 @@
 #!/usr/bin/env node
 /**
- * Registers Telegram webhooks for every bot after deployment.
+ * Registers Telegram webhooks for every bot after local deployment.
  *
- * Tokens are imported directly from each bot's source file.
- * Required CI env vars (provided automatically by Cloudflare Pages/Workers):
- *   CLOUDFLARE_API_TOKEN
- *   CLOUDFLARE_ACCOUNT_ID
+ * Reads secrets from process.env or local .dev.vars file.
  */
 
 import { readFileSync } from "fs";
@@ -15,7 +12,7 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const devVarsPath = resolve(__dirname, "../.dev.vars");
 
-// Load .dev.vars when running locally (values already in env take priority)
+// Load .dev.vars when running locally
 try {
     const lines = readFileSync(devVarsPath, "utf8").split("\n");
     for (const line of lines) {
@@ -26,23 +23,14 @@ try {
         if (key && value && !(key in process.env)) process.env[key] = value;
     }
 } catch {
-    // No .dev.vars — rely on real env vars
+    // No .dev.vars
 }
 
-// ---------------------------------------------------------------------------
-// Bot registry — add new bots here, matching the routes in src/index.js
-// ---------------------------------------------------------------------------
 const BOTS = [
     { name: "WaMe", token: process.env.BOT_WAME_TOKEN, path: "/bot_wame" },
     { name: "NanaCalc", token: process.env.BOT_NANA_TOKEN, path: "/bot_nana" },
 ];
 
-// ---------------------------------------------------------------------------
-// Resolve WORKER_URL
-// If not set explicitly, derive it from the Cloudflare API using the
-// CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID that wrangler already injects
-// into the CI build environment.
-// ---------------------------------------------------------------------------
 let workerUrl = process.env.WORKER_URL?.replace(/\/$/, "");
 
 if (!workerUrl) {
@@ -50,13 +38,11 @@ if (!workerUrl) {
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 
     if (apiToken && accountId) {
-        // Read worker name from wrangler.toml
         const toml = readFileSync(resolve(__dirname, "../wrangler.toml"), "utf8");
         const nameMatch = toml.match(/^name\s*=\s*"([^"]+)"/m);
         const workerName = nameMatch?.[1];
 
         if (workerName) {
-            // Ask CF API for this account's workers.dev subdomain
             const subRes = await fetch(
                 `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/subdomain`,
                 { headers: { Authorization: `Bearer ${apiToken}` } }
@@ -66,24 +52,21 @@ if (!workerUrl) {
 
             if (subdomain) {
                 workerUrl = `https://${workerName}.${subdomain}.workers.dev`;
-                console.log(`Derived WORKER_URL: ${workerUrl}`);
             }
         }
     }
 }
 
 if (!workerUrl) {
-    console.error("Error: could not determine WORKER_URL.");
-    console.error("Set it explicitly in .dev.vars or as a CI environment variable:");
-    console.error("  WORKER_URL=https://telegram-bots.yoursubdomain.workers.dev");
-    process.exit(1);
+    console.log("Notice: WORKER_URL not provided. Skipping CLI webhook registration.");
+    console.log("You can register webhooks anytime by visiting /setup_webhooks on your deployed worker URL.");
+    process.exit(0);
 }
 
 let allOk = true;
 for (const bot of BOTS) {
     if (!bot.token) {
-        console.error(`✗  ${bot.name}: Token missing in environment / .dev.vars`);
-        allOk = false;
+        console.log(`Notice: ${bot.name} token not found in local environment. Skipping CLI webhook registration.`);
         continue;
     }
 
